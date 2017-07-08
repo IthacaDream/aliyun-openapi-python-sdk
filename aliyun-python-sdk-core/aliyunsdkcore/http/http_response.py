@@ -17,10 +17,13 @@
 
 # coding=utf-8
 __author__ = 'alex jiang'
-import httplib
 
-from http_request import HttpRequest
-import protocol_type as PT
+from http import client
+import tornado.httpclient
+import tornado.gen
+
+from .http_request import HttpRequest
+from . import protocol_type as PT
 
 
 class HttpResponse(HttpRequest):
@@ -62,17 +65,17 @@ class HttpResponse(HttpRequest):
         else:
             return self.get_http_response()
 
-    def get_response_object(self):
+    async def get_response_object(self):
         if self.get_ssl_enabled():
-            return self.get_https_response_object()
+            return await self.get_https_response_object()
         else:
-            return self.get_http_response_object()
+            return await self.get_http_response_object()
 
     def get_http_response(self):
         if self.__port is None or self.__port == "":
             self.__port = 80
         try:
-            self.__connection = httplib.HTTPConnection(
+            self.__connection = client.HTTPConnection(
                 self.get_host(), self.__port)
             self.__connection.connect()
             self.__connection.request(
@@ -85,11 +88,32 @@ class HttpResponse(HttpRequest):
         finally:
             self.__close_connection()
 
-    def get_http_response_object(self):
+    async def get_http_response_object(self):
         if self.__port is None or self.__port == "":
             self.__port = 80
+
+        # by Will        
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        resp = await tornado.gen.Task(
+            http_client.fetch,
+            "{0}://{1}:{2}{3}".format(PT.HTTP,
+                                      self.get_host(),
+                                      self.__port,
+                                      self.get_url()),
+            method=self.get_method(),
+            headers=self.get_headers(),
+            body=self.get_body(),
+            validate_cert=False)
+        
+        return resp.code, resp.headers, resp.body
+        # end
+
+        """
+        if self.__port is None or self.__port == "":
+            self.__port = 80
+
         try:
-            self.__connection = httplib.HTTPConnection(
+            self.__connection = client.HTTPConnection(
                 self.get_host(), self.__port)
             self.__connection.connect()
             self.__connection.request(
@@ -101,13 +125,14 @@ class HttpResponse(HttpRequest):
             return response.status, response.getheaders(), response.read()
         finally:
             self.__close_connection()
+        """
 
     def get_https_response(self):
         if self.__port is None or self.__port == "":
             self.__port = 443
         try:
             self.__port = 443
-            self.__connection = httplib.HTTPSConnection(
+            self.__connection = client.HTTPSConnection(
                 self.get_host(),
                 self.__port,
                 cert_file=self.__cert_file,
@@ -123,12 +148,33 @@ class HttpResponse(HttpRequest):
         finally:
             self.__close_connection()
 
-    def get_https_response_object(self):
+    async def get_https_response_object(self):
         if self.__port is None or self.__port == "":
             self.__port = 443
+
+        # by Will
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        resp = await tornado.gen.Task(
+            http_client.fetch,
+            "{0}://{1}:{2}{3}".format(PT.HTTPS,
+                                      self.get_host(),
+                                      self.__port,
+                                      self.get_url()),
+            method=self.get_method(),
+            headers=self.get_headers(),
+            body=self.get_body(),
+            validate_cert=True,
+            ca_certs=self.__cert_file,
+            client_key=self.__key_file)
+        
+        return resp.code, resp.headers, resp.body
+     
+        # end
+
+        """
         try:
             self.__port = 443
-            self.__connection = httplib.HTTPSConnection(
+            self.__connection = client.HTTPSConnection(
                 self.get_host(),
                 self.__port,
                 cert_file=self.__cert_file,
@@ -143,6 +189,7 @@ class HttpResponse(HttpRequest):
             return response.status, response.getheaders(), response.read()
         finally:
             self.__close_connection()
+        """
 
     def __close_connection(self):
         if self.__connection is not None:

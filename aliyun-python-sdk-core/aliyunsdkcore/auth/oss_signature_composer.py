@@ -23,10 +23,10 @@ import sys
 
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parentdir)
-import roa_signature_composer
-import sha_hmac1 as mac1
+from . import roa_signature_composer
+from . import sha_hmac1 as mac1
 from ..utils import parameter_helper as helper
-import urllib
+import urllib.parse
 
 ACCEPT = "Accept"
 CONTENT_MD5 = "Content-MD5"
@@ -149,7 +149,7 @@ def get_url(queries, uri_pattern, path_parameters):
         uri_pattern, path_parameters)
     if not url.endswith("?"):
         url += "?"
-    url += urllib.urlencode(queries)
+    url += urllib.parse.urlencode(queries)
     if url.endswith("?"):
         url = url[0:(len(url) - 1)]
     return url

@@ -36,4 +36,4 @@ def _get_md5(content):
 
 
 def get_md5_base64_str(content):
-    return base64.encodestring(_get_md5(content)).strip()
+    return base64.encodebytes(_get_md5(content)).strip()

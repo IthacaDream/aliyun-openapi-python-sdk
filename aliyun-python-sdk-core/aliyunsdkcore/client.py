@@ -20,7 +20,7 @@
 # coding=utf-8
 import os
 import sys
-import httplib
+from http import client
 import warnings
 warnings.filterwarnings("once", category=DeprecationWarning)
 
@@ -199,7 +199,7 @@ class AcsClient:
             self._port)
         return response
 
-    def _implementation_of_do_action(self, request):
+    async def _implementation_of_do_action(self, request):
         endpoint = self._resolve_endpoint(request)
         http_response = self._make_http_response(endpoint, request)
         if self._url_test_flag:
@@ -207,7 +207,7 @@ class AcsClient:
 
         # Do the actual network thing
         try:
-            status, headers, body = http_response.get_response_object()
+            status, headers, body = await http_response.get_response_object()
             return status, headers, body
         except IOError as e:
             raise ClientException(
@@ -220,7 +220,7 @@ class AcsClient:
 
     def _parse_error_info_from_response_body(self, response_body):
         try:
-            body_obj = json.loads(response_body)
+            body_obj = json.loads(response_body.decode('utf-8'))
             if 'Code' in body_obj and 'Message' in body_obj:
                 return (body_obj['Code'], body_obj['Message'])
             else:
@@ -232,19 +232,18 @@ class AcsClient:
             return (error_code.SDK_UNKNOWN_SERVER_ERROR,
                     error_msg.get_msg('SDK_UNKNOWN_SERVER_ERROR'))
 
-    def do_action_with_exception(self, acs_request):
+    async def do_action_with_exception(self, acs_request):
 
         # set server response format as json, because thie function will
         # parse the response so which format doesn't matter
         acs_request.set_accept_format('json')
 
-        status, headers, body = self._implementation_of_do_action(acs_request)
+        status, headers, body = await self._implementation_of_do_action(acs_request)
 
         request_id = None
         ret = body
-
         try:
-            body_obj = json.loads(body)
+            body_obj = json.loads(body.decode('utf-8'))
             request_id = body_obj.get('RequestId')
             ret = body_obj
         except ValueError:
@@ -252,7 +251,7 @@ class AcsClient:
             # data instead
             pass
 
-        if status != httplib.OK:
+        if status != client.OK:
             server_error_code, server_error_message = self._parse_error_info_from_response_body(
                 body)
             raise ServerException(
@@ -263,15 +262,15 @@ class AcsClient:
 
         return body
 
-    def do_action(self, acs_request):
+    async def do_action(self, acs_request):
         warnings.warn(
             "do_action() method is deprecated, please use do_action_with_exception() instead.",
             DeprecationWarning)
-        status, headers, body = self._implementation_of_do_action(acs_request)
+        status, headers, body = await self._implementation_of_do_action(acs_request)
         return body
 
-    def get_response(self, acs_request):
+    async def get_response(self, acs_request):
         warnings.warn(
             "get_response() method is deprecated, please use do_action_with_exception() instead.",
             DeprecationWarning)
-        return self._implementation_of_do_action(acs_request)
+        return await self._implementation_of_do_action(acs_request)

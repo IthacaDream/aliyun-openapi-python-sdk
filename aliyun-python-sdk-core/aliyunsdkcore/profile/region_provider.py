@@ -144,8 +144,8 @@ def convert_dict_to_endpointsxml(mdict):
     try:
         f.write(''.join(content))
     except Exception as e:
-        print e
-        print "Please confirm you has use sudo + cmd"
+        print(e)
+        print("Please confirm you has use sudo + cmd")
     finally:
         f.close()
 
@@ -160,5 +160,5 @@ def _createFile(filename):
 
 
 if __name__ == '__main__':
-    print find_product_domain('cn-hangzhou', 'Rds')
+    print(find_product_domain('cn-hangzhou', 'Rds'))
     modify_point('ecs', 'cn-beijing-2', 'ecs.aliyuncs.com')

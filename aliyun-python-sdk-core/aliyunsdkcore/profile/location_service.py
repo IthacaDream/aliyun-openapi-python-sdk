@@ -122,7 +122,7 @@ class LocationService:
                 self.__clinetRef.get_port())
 
             status, header, body = response.get_response_object()
-            result = json.loads(body)
+            result = json.loads(body.decode('utf-8'))
             if status == 200:
                 return result.get('Endpoint')
             elif status >= 400 and status < 500:
